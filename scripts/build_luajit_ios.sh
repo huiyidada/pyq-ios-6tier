@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build macOS host LuaJIT on Apple Silicon runner -> iOS-compatible 0x08 bytecode (FR2).
+# Build macOS host LuaJIT; run from src/ for -b (0x08 bytecode on Apple Silicon).
 set -euo pipefail
 
 ROOT="${GITHUB_WORKSPACE:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -11,13 +11,12 @@ LJ_DIR="$ROOT/.luajit-src"
 LUAJIT="$LJ_DIR/src/luajit"
 
 smoke_test() {
-  local bin="$1"
-  run_luajit "$bin" -v
+  run_luajit -v
   cat > /tmp/lj_smoke.lua <<'EOF'
 LbShopLayer = class("LbShopLayer", function() return display.newNode() end)
 function LbShopLayer:ctor() end
 EOF
-  run_luajit "$bin" -b -s /tmp/lj_smoke.lua /tmp/lj_smoke.bc
+  run_luajit -b -s /tmp/lj_smoke.lua /tmp/lj_smoke.bc
   echo "smoke test header:"
   xxd -l 8 /tmp/lj_smoke.bc
   python3 - <<'PY'
@@ -30,12 +29,14 @@ print("OK: bytecode flag 0x08 (iOS FR2)")
 PY
 }
 
+export LJ_DIR="$LJ_DIR"
+
 if [ -x "$LUAJIT" ]; then
   echo "found existing luajit, smoke test..."
-  if smoke_test "$LUAJIT"; then
-    write_luajit_env_file "$ROOT" "$LUAJIT"
+  if smoke_test; then
+    write_luajit_env_file "$ROOT" "$LJ_DIR"
     echo "$LUAJIT" > "$ROOT/.luajit_ios_path"
-    [ -n "${GITHUB_ENV:-}" ] && echo "LUAJIT_IOS=$LUAJIT" >> "$GITHUB_ENV"
+    [ -n "${GITHUB_ENV:-}" ] && echo "LJ_DIR=$LJ_DIR" >> "$GITHUB_ENV"
     echo "reuse: $LUAJIT"
     exit 0
   fi
@@ -53,13 +54,15 @@ git checkout v2.1.0-beta3 2>/dev/null || git checkout "$(git rev-list -n 1 v2.1.
 make clean >/dev/null 2>&1 || true
 unset DYLD_ROOT_PATH SDKROOT IPHONEOS_DEPLOYMENT_TARGET
 
-echo "building macOS host LuaJIT (-j1) for arm64 FR2 bytecode..."
+echo "building macOS host LuaJIT (-j1)..."
 make -j1 HOST_CC="clang -arch arm64"
 
 file "$LUAJIT"
-smoke_test "$LUAJIT"
+smoke_test
 
-write_luajit_env_file "$ROOT" "$LUAJIT"
+write_luajit_env_file "$ROOT" "$LJ_DIR"
 echo "$LUAJIT" > "$ROOT/.luajit_ios_path"
-[ -n "${GITHUB_ENV:-}" ] && echo "LUAJIT_IOS=$LUAJIT" >> "$GITHUB_ENV"
+if [ -n "${GITHUB_ENV:-}" ]; then
+  echo "LJ_DIR=$LJ_DIR" >> "$GITHUB_ENV"
+fi
 echo "macOS host LuaJIT ready: $LUAJIT"
