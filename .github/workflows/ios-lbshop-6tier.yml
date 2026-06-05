@@ -16,14 +16,15 @@ permissions:
 
 jobs:
   build-ios-shop:
-    runs-on: macos-latest
+    # macos-14 = Xcode 15; macos-latest uses Xcode 16 which breaks LuaJIT 2.1 beta3 buildvm
+    runs-on: macos-14
     timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Clear broken LuaJIT cache
-        run: rm -rf .luajit-src/src/luajit .luajit_ios_path || true
+        run: rm -rf .luajit-src .luajit_ios_path .luajit_env || true
 
       - name: Build LuaJIT for iOS (simulator)
         run: bash scripts/build_luajit_ios.sh
