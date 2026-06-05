@@ -2,12 +2,23 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=luajit_sim_env.sh
+source "$SCRIPT_DIR/luajit_sim_env.sh"
 cd "$ROOT"
 
-if [ -f "$ROOT/.luajit_ios_path" ]; then
+if [ -f "$ROOT/.luajit_env" ]; then
+  # shellcheck disable=SC1091
+  source "$ROOT/.luajit_env"
+elif [ -f "$ROOT/.luajit_ios_path" ]; then
   LUAJIT="$(cat "$ROOT/.luajit_ios_path")"
+  write_luajit_env_file "$ROOT" "$LUAJIT"
+  # shellcheck disable=SC1091
+  source "$ROOT/.luajit_env"
 elif [ -n "${LUAJIT_IOS:-}" ]; then
-  LUAJIT="$LUAJIT_IOS"
+  write_luajit_env_file "$ROOT" "$LUAJIT_IOS"
+  # shellcheck disable=SC1091
+  source "$ROOT/.luajit_env"
 else
   echo "LUAJIT_IOS not set; run build_luajit_ios.sh first"
   exit 1
@@ -16,11 +27,12 @@ fi
 mkdir -p build dist reports
 
 echo "=== compile LbShopLayer.lua ==="
-"$LUAJIT" -b -s client/LbShopLayer.lua build/LbShopLayer
+echo "DYLD_ROOT_PATH=$DYLD_ROOT_PATH"
+run_luajit "$LUAJIT_IOS" -b -s client/LbShopLayer.lua build/LbShopLayer
 
 {
   echo "luajit -v:"
-  "$LUAJIT" -v
+  run_luajit "$LUAJIT_IOS" -v
   echo
   echo "LbShopLayer size:"
   wc -c build/LbShopLayer
