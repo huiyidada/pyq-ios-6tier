@@ -16,6 +16,7 @@ smoke_test() {
 LbShopLayer = class("LbShopLayer", function() return display.newNode() end)
 function LbShopLayer:ctor() end
 EOF
+  # Do NOT use -s: strip sets flag 0x02 -> 0x0a; iOS needs 0x08 only.
   run_luajit -b /tmp/lj_smoke.lua /tmp/lj_smoke.bc
   echo "smoke test header:"
   xxd -l 8 /tmp/lj_smoke.bc

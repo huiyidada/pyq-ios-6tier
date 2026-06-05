@@ -1,0 +1,25 @@
+iOS 字节码头（深度排查结论）
+==========================
+
+原生 iOS 模块头（pyq64 内）：
+  1b 4c 4a  02  08  ...
+  魔数      版  FR2
+
+GitHub Mac 上常见错误：
+  luajit -b xxx.lua out     → 默认带 STRIP → 第5字节 = 0x0a (0x08|0x02) → 失败
+  luajit -bg xxx.lua out    → 保留调试信息 → 第5字节 = 0x08 → 正确
+
+正确编译命令（必须在 Mac src/ 目录执行）：
+  cd .luajit-src/src && ./luajit -bg LbShopLayer.lua LbShopLayer
+
+本仓库 scripts/build_all.sh 已写死 -bg，并带 fix_ios_bc_header.py 兜底。
+
+若仍是 0x02（非 0x0a/0x08）= Linux 字节码，不能在 iOS 用。
+
+上传 GitHub 最少需要：
+  scripts/build_all.sh
+  scripts/luajit_sim_env.sh
+  tools/fix_ios_bc_header.py
+  tools/pack_ios_lbshop.py
+  tools/validate_pyq64_ios.py
+  .github/workflows/ios-lbshop-6tier.yml
