@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build LuaJIT for iOS simulator; run with DYLD_ROOT_PATH only AFTER build.
+# Build macOS host LuaJIT on Apple Silicon runner -> iOS-compatible 0x08 bytecode (FR2).
 set -euo pipefail
 
 ROOT="${GITHUB_WORKSPACE:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -24,27 +24,22 @@ EOF
 import sys
 d = open("/tmp/lj_smoke.bc", "rb").read()
 if d[4] != 0x08:
-    print("FAIL: iOS bytecode flag is 0x%02x, need 0x08" % d[4])
+    print("FAIL: bytecode flag is 0x%02x, need 0x08" % d[4])
     sys.exit(1)
-print("OK: iOS bytecode flag 0x08")
+print("OK: bytecode flag 0x08 (iOS FR2)")
 PY
 }
 
 if [ -x "$LUAJIT" ]; then
-  echo "found existing luajit, running smoke test..."
+  echo "found existing luajit, smoke test..."
   if smoke_test "$LUAJIT"; then
-    echo "reuse cached luajit: $LUAJIT"
     write_luajit_env_file "$ROOT" "$LUAJIT"
     echo "$LUAJIT" > "$ROOT/.luajit_ios_path"
-    if [ -n "${GITHUB_ENV:-}" ]; then
-      setup_luajit_sim_env
-      echo "LUAJIT_IOS=$LUAJIT" >> "$GITHUB_ENV"
-      echo "DYLD_ROOT_PATH=$DYLD_ROOT_PATH" >> "$GITHUB_ENV"
-      echo "SDKROOT=$SDKROOT" >> "$GITHUB_ENV"
-    fi
+    [ -n "${GITHUB_ENV:-}" ] && echo "LUAJIT_IOS=$LUAJIT" >> "$GITHUB_ENV"
+    echo "reuse: $LUAJIT"
     exit 0
   fi
-  echo "cached luajit failed smoke test, rebuilding..."
+  echo "cached binary failed, rebuilding..."
 fi
 
 if [ ! -d "$LJ_DIR/.git" ]; then
@@ -56,32 +51,15 @@ git fetch --tags --depth 1 2>/dev/null || true
 git checkout v2.1.0-beta3 2>/dev/null || git checkout "$(git rev-list -n 1 v2.1.0-beta3)"
 
 make clean >/dev/null 2>&1 || true
+unset DYLD_ROOT_PATH SDKROOT IPHONEOS_DEPLOYMENT_TARGET
 
-SIMSYS="$(xcrun --sdk iphonesimulator --show-sdk-path)"
-echo "iOS Simulator SDK: $SIMSYS"
-
-# CRITICAL: do NOT set DYLD_ROOT_PATH during make — breaks host buildvm (dyld_sim error).
-unset DYLD_ROOT_PATH
-unset SDKROOT
-unset IPHONEOS_DEPLOYMENT_TARGET
-
-echo "building LuaJIT (-j1, simulator target)..."
-
-make -j1 \
-  HOST_CC="clang -arch arm64" \
-  TARGET_SYS=iOS \
-  TARGET_FLAGS="-arch arm64 -isysroot $SIMSYS -mios-simulator-version-min=12.0 -Os"
+echo "building macOS host LuaJIT (-j1) for arm64 FR2 bytecode..."
+make -j1 HOST_CC="clang -arch arm64"
 
 file "$LUAJIT"
 smoke_test "$LUAJIT"
 
 write_luajit_env_file "$ROOT" "$LUAJIT"
 echo "$LUAJIT" > "$ROOT/.luajit_ios_path"
-
-if [ -n "${GITHUB_ENV:-}" ]; then
-  setup_luajit_sim_env
-  echo "LUAJIT_IOS=$LUAJIT" >> "$GITHUB_ENV"
-  echo "DYLD_ROOT_PATH=$DYLD_ROOT_PATH" >> "$GITHUB_ENV"
-  echo "SDKROOT=$SDKROOT" >> "$GITHUB_ENV"
-fi
-echo "LuaJIT iOS simulator build ready: $LUAJIT"
+[ -n "${GITHUB_ENV:-}" ] && echo "LUAJIT_IOS=$LUAJIT" >> "$GITHUB_ENV"
+echo "macOS host LuaJIT ready: $LUAJIT"

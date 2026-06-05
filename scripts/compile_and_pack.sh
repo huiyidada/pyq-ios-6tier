@@ -11,8 +11,8 @@ if [ -f "$ROOT/.luajit_env" ]; then
   # shellcheck disable=SC1091
   source "$ROOT/.luajit_env"
 elif [ -f "$ROOT/.luajit_ios_path" ]; then
-  LUAJIT="$(cat "$ROOT/.luajit_ios_path")"
-  write_luajit_env_file "$ROOT" "$LUAJIT"
+  LUAJIT_IOS="$(cat "$ROOT/.luajit_ios_path")"
+  write_luajit_env_file "$ROOT" "$LUAJIT_IOS"
   # shellcheck disable=SC1091
   source "$ROOT/.luajit_env"
 elif [ -n "${LUAJIT_IOS:-}" ]; then
@@ -27,7 +27,6 @@ fi
 mkdir -p build dist reports
 
 echo "=== compile LbShopLayer.lua ==="
-echo "DYLD_ROOT_PATH=$DYLD_ROOT_PATH"
 run_luajit "$LUAJIT_IOS" -b -s client/LbShopLayer.lua build/LbShopLayer
 
 {
