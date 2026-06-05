@@ -1,27 +1,16 @@
 #!/usr/bin/env python3
-"""Pack Mac-compiled iOS modules into pyq64.zip (safe base + replacements)."""
+"""Pack Mac-built / patched iOS modules into pyq64.zip."""
 import argparse
 import shutil
 import zipfile
 from pathlib import Path
 
 WELCOME = "app.scenes.WelcomeScene"
-LBSHOP = "app.module.lobby.view.layer.LbShopLayer"
 LBVIEW = "app.module.lobby.view.LobbyBattleView"
-LOGIN = "app.scenes.LoginScene"
-HFROOM = "app.module.lobby.view.createRoom.HFCreateRoomLayer"
-SSSROOM = "app.module.lobby.view.createRoom.CreateRoomLayer_Sss"
 HTOOLS = "app.util.HttpTools"
 OLD_AUTH = b"121.204.249.235"
 NEW_AUTH = b"12345.nikyou.cn"
 GOLD_OFF = 1510
-
-MODULE_MAP = {
-    "lbshop": LBSHOP,
-    "login": LOGIN,
-    "hfroom": HFROOM,
-    "sssroom": SSSROOM,
-}
 
 
 def assert_ios(data, name):
@@ -50,26 +39,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--work", type=Path, default=Path("/tmp/pack_ios_modules_work"))
+    ap.add_argument("--work", type=Path, default=Path("/tmp/pack_ios_work"))
+    ap.add_argument("--skip-extract", action="store_true")
     ap.add_argument("--lbshop", type=Path, default=None)
-    ap.add_argument("--login", type=Path, default=None)
-    ap.add_argument("--hfroom", type=Path, default=None)
-    ap.add_argument("--sssroom", type=Path, default=None)
     args = ap.parse_args()
 
-    replacements = {
-        LBSHOP: args.lbshop,
-        LOGIN: args.login,
-        HFROOM: args.hfroom,
-        SSSROOM: args.sssroom,
-    }
-
-    if args.work.exists():
-        shutil.rmtree(args.work)
-    args.work.mkdir(parents=True)
-
-    with zipfile.ZipFile(args.base, "r") as zin:
-        zin.extractall(args.work)
+    if not args.skip_extract:
+        if args.work.exists():
+            shutil.rmtree(args.work)
+        args.work.mkdir(parents=True)
+        with zipfile.ZipFile(args.base, "r") as zin:
+            zin.extractall(args.work)
 
     for name, patchfn in ((WELCOME, patch_welcome), (LBVIEW, patch_gold)):
         path = args.work / name
@@ -79,13 +59,11 @@ def main():
         path.write_bytes(data)
         print("patched", name)
 
-    for module, src in replacements.items():
-        if src is None or not src.is_file():
-            continue
-        payload = src.read_bytes()
-        assert_ios(payload, module)
-        (args.work / module).write_bytes(payload)
-        print("replaced", module, "->", len(payload), "bytes")
+    if args.lbshop and args.lbshop.is_file():
+        payload = args.lbshop.read_bytes()
+        assert_ios(payload, "LbShopLayer")
+        (args.work / "app.module.lobby.view.layer.LbShopLayer").write_bytes(payload)
+        print("replaced LbShopLayer ->", len(payload), "bytes")
 
     ht = (args.work / HTOOLS).read_bytes()
     assert_ios(ht, HTOOLS)

@@ -1,48 +1,46 @@
-【2026-06-06 闪退修复】
-原因：在 Linux 上对 iOS 字节码做了变长补丁（游客登录/房间人数），真机必闪退。
-服务器已恢复安全底包 pyq64.zip.bak_prev（331 文件，可正常进游戏）。
+【2026-06-06 CI 失败已修】
+原因1：仓库里没有 LoginScene.lua 等源码（不需要了）
+原因2：脚本末尾 cp 自己覆盖自己导致 exit 1
 
-游客登录 + 人数 2/4/6/7/8 必须用 Mac 云端 luajit -bg 编译，不能 Linux 手改。
-
-========================================
-推荐：GitHub Actions Mac 编译（无需自有 Mac）
-========================================
-
-【1】上传 ios-github-build 到 GitHub 仓库
-
-【2】从 client_qqdbl 工程复制源码到 client/：
-    LoginScene.lua
-    HFCreateRoomLayer.lua
-    CreateRoomLayer_Sss.lua
-    （按 client/MAC_COMPILE_README.md 改好再上传）
-
-【3】Actions → iOS final sync (Mac compile) → Run workflow
-
-【4】下载 Artifact：pyq64-ios-final → pyq64.zip
-
-【5】替换 IPA 内：
-    Payload/奇趣大菠萝.app/res/pyq64.zip
-    Payload/奇趣大菠萝.app/res/pyq64/  （整目录）
-
-【6】重签名安装
+新流程：Mac CI 直接对 iOS 原生字节码打补丁（无需 .lua 源码）
+  - 游客登录 LoginScene
+  - 人数 2/4/6/7/8 HFCreateRoomLayer + CreateRoomLayer_Sss
+  - 六档商城 LbShopLayer.lua（client/ 里已有）
 
 ========================================
-仅商城六档（旧流程，仍可用）
+上传这些文件到 GitHub 后 Run workflow
 ========================================
-Actions → iOS 6-tier LbShopLayer
-步骤名：Build 6-tier pyq64 (single pipeline)
-必须用 luajit -bg（不能单独 -b）
+
+必须包含：
+  base/pyq64_base.zip
+  scripts/build_ios_final.sh
+  tools/patch_ios_bytecode.py
+  tools/patch_login_guest.py
+  tools/patch_login_guest_ios.py
+  tools/patch_hf_player_num.py
+  tools/patch_sss_player_num.py
+  tools/pack_ios_modules.py
+  tools/validate_pyq64_ios.py
+  tools/fix_ios_bc_header.py
+  client/LbShopLayer.lua
+
+Actions → iOS final sync (Mac compile) → Run workflow
 
 ========================================
 成功标志
 ========================================
-  xxd -l 6 模块 → 第 5 字节 08
-  validate_pyq64_ios.py 通过
-  冷启动不闪退
+  patched app.scenes.LoginScene ... -> 15879
+  patched HFCreateRoomLayer ... -> 30862
+  OK LbShopLayer xxxx bytes
+  OK: dist/pyq64.zip
+  DONE: dist/pyq64.zip
+
+下载 Artifact pyq64-ios-final → 换进 IPA → 重签名
 
 ========================================
-严禁
+不需要再上传
 ========================================
-  × Linux 上改 iOS LoginScene/HFCreateRoomLayer 长度
-  × 安卓 pyq 模块拷进 pyq64.zip
-  × 只改第 5 字节 00→08
+  LoginScene.lua
+  HFCreateRoomLayer.lua
+  CreateRoomLayer_Sss.lua
+（除非你要完全重编译整文件）
