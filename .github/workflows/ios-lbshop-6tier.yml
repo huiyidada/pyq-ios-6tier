@@ -1,0 +1,47 @@
+name: iOS 6-tier LbShopLayer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "client/LbShopLayer.lua"
+      - "base/pyq64_base.zip"
+      - "scripts/**"
+      - "tools/**"
+      - ".github/workflows/ios-lbshop-6tier.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios-shop:
+    runs-on: macos-13
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build LuaJIT for iOS
+        run: bash scripts/build_luajit_ios.sh
+
+      - name: Compile LbShopLayer and pack pyq64
+        run: bash scripts/compile_and_pack.sh
+
+      - name: Upload pyq64.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyq64-ios-6tier
+          path: |
+            dist/pyq64.zip
+            dist/app.module.lobby.view.layer.LbShopLayer
+            reports/build_report.txt
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## iOS 6-tier build OK" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat reports/build_report.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
