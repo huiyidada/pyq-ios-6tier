@@ -16,7 +16,7 @@ smoke_test() {
 LbShopLayer = class("LbShopLayer", function() return display.newNode() end)
 function LbShopLayer:ctor() end
 EOF
-  run_luajit -b -s /tmp/lj_smoke.lua /tmp/lj_smoke.bc
+  run_luajit -b /tmp/lj_smoke.lua /tmp/lj_smoke.bc
   echo "smoke test header:"
   xxd -l 8 /tmp/lj_smoke.bc
   python3 - <<'PY'
