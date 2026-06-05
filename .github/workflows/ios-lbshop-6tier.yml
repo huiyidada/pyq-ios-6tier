@@ -21,16 +21,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Cache LuaJIT iOS binary
-        uses: actions/cache@v4
-        with:
-          path: |
-            .luajit-src/src/luajit
-            .luajit_ios_path
-          key: luajit-ios-v2-${{ runner.os }}-${{ hashFiles('scripts/build_luajit_ios.sh') }}
-      
-      - name: Build LuaJIT for iOS
+
+      - name: Clear broken LuaJIT cache
+        run: rm -rf .luajit-src/src/luajit .luajit_ios_path || true
+
+      - name: Build LuaJIT for iOS (simulator)
         run: bash scripts/build_luajit_ios.sh
 
       - name: Compile LbShopLayer and pack pyq64
