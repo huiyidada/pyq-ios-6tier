@@ -17,11 +17,19 @@ permissions:
 jobs:
   build-ios-shop:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      
+      - name: Cache LuaJIT iOS binary
+        uses: actions/cache@v4
+        with:
+          path: |
+            .luajit-src/src/luajit
+            .luajit_ios_path
+          key: luajit-ios-v2-${{ runner.os }}-${{ hashFiles('scripts/build_luajit_ios.sh') }}
+      
       - name: Build LuaJIT for iOS
         run: bash scripts/build_luajit_ios.sh
 
