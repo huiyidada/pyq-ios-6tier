@@ -1,0 +1,15 @@
+奇趣大菠萝 iOS 6档商城 · 3步快速开始
+=====================================
+
+① GitHub 新建空仓库（例如 pyq-ios-6tier）
+
+② 上传本文件夹全部内容（git push 或网页拖入）
+
+③ 打开 Actions → iOS 6-tier LbShopLayer → Run workflow
+   等绿勾 → 下载 Artifacts 里的 pyq64.zip
+
+④ 替换到：Payload/奇趣大菠萝.app/res/pyq64.zip → 重签名安装
+
+详细说明见 README.md
+
+发回助手：build_report.txt + pyq64.zip + 测试结果
