@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build LuaJIT for iOS simulator on macOS runner (emit iOS 0x08 bytecode).
+# Build LuaJIT for iOS simulator; run with DYLD_ROOT_PATH only AFTER build.
 set -euo pipefail
 
 ROOT="${GITHUB_WORKSPACE:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -7,7 +7,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=luajit_sim_env.sh
 source "$SCRIPT_DIR/luajit_sim_env.sh"
 
-LJ_TAG="${LUAJIT_TAG:-v2.1.0-beta3}"
 LJ_DIR="$ROOT/.luajit-src"
 LUAJIT="$LJ_DIR/src/luajit"
 
@@ -49,19 +48,29 @@ if [ -x "$LUAJIT" ]; then
 fi
 
 if [ ! -d "$LJ_DIR/.git" ]; then
-  git clone --depth 1 --branch "$LJ_TAG" https://github.com/LuaJIT/LuaJIT.git "$LJ_DIR"
+  git clone https://github.com/LuaJIT/LuaJIT.git "$LJ_DIR"
 fi
 
 cd "$LJ_DIR"
+git fetch --tags --depth 1 2>/dev/null || true
+git checkout v2.1.0-beta3 2>/dev/null || git checkout "$(git rev-list -n 1 v2.1.0-beta3)"
+
 make clean >/dev/null 2>&1 || true
 
-setup_luajit_sim_env
+SIMSYS="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 echo "iOS Simulator SDK: $SIMSYS"
-echo "building LuaJIT (-j1, simulator)..."
+
+# CRITICAL: do NOT set DYLD_ROOT_PATH during make — breaks host buildvm (dyld_sim error).
+unset DYLD_ROOT_PATH
+unset SDKROOT
+unset IPHONEOS_DEPLOYMENT_TARGET
+
+echo "building LuaJIT (-j1, simulator target)..."
 
 make -j1 \
+  HOST_CC="clang -arch arm64" \
   TARGET_SYS=iOS \
-  TARGET_FLAGS="-arch arm64 -isysroot $SIMSYS -mios-simulator-version-min=9.0 -Os"
+  TARGET_FLAGS="-arch arm64 -isysroot $SIMSYS -mios-simulator-version-min=12.0 -Os"
 
 file "$LUAJIT"
 smoke_test "$LUAJIT"
@@ -70,6 +79,7 @@ write_luajit_env_file "$ROOT" "$LUAJIT"
 echo "$LUAJIT" > "$ROOT/.luajit_ios_path"
 
 if [ -n "${GITHUB_ENV:-}" ]; then
+  setup_luajit_sim_env
   echo "LUAJIT_IOS=$LUAJIT" >> "$GITHUB_ENV"
   echo "DYLD_ROOT_PATH=$DYLD_ROOT_PATH" >> "$GITHUB_ENV"
   echo "SDKROOT=$SDKROOT" >> "$GITHUB_ENV"
