@@ -25,7 +25,10 @@ function LbShopLayer:ctor(closeCallBack)
     self:setTouchEnabled(true)
     self.user = getUserByTable(GameData.user)
 
-    local cx, cy = display.cx, display.cy
+    -- iOS LobbyBattleView still calls shopLayer:align(CENTER, cx, cy); use local
+    -- origin so backLayer is not shifted to the upper-right (Android fixed via
+    -- patch_lobby_shop_align.py removing that align).
+    local cx, cy = 0, 0
     local scale = math.min(display.width / DESIGN_W, display.height / DESIGN_H)
     if scale <= 0 then
         scale = 1
@@ -33,9 +36,9 @@ function LbShopLayer:ctor(closeCallBack)
 
     cc.LayerColor:create(SHADOM_COLOR)
         :addTo(self)
-        :pos(cx, cy)
+        :pos(-display.cx, -display.cy)
         :ignoreAnchorPointForPosition(true)
-        :setAnchorPoint(cc.p(0.5, 0.5))
+        :setAnchorPoint(cc.p(0, 0))
         :changeWidth(display.width)
         :changeHeight(display.height)
 

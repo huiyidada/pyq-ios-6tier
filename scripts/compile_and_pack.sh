@@ -24,6 +24,7 @@ mkdir -p build dist reports
 echo "=== compile LbShopLayer.lua ==="
 echo "LJ_DIR=$LJ_DIR"
 run_luajit -bg "$ROOT/client/LbShopLayer.lua" "$ROOT/build/LbShopLayer"
+python3 "$ROOT/tools/fix_ios_bc_header.py" "$ROOT/build/LbShopLayer" 2>/dev/null || true
 
 {
   echo "luajit -v:"

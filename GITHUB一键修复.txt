@@ -1,0 +1,67 @@
+你还在跑旧版！对照截图：
+  旧版步骤名：Build LuaJIT for iOS (simulator)  ← 你现在的
+  新版步骤名：Build 6-tier pyq64 (single pipeline)
+
+旧版用 luajit -b → 默认 strip → 0x0a 必失败
+新版用 luajit -bg → 0x08 正确
+
+========================================
+GitHub 网页上按顺序做（10分钟）
+========================================
+
+【1】新建文件 scripts/build_all.sh
+    内容：从服务器 ios-github-build.tar.gz 里复制整文件
+
+【2】新建文件 tools/fix_ios_bc_header.py
+    内容：从压缩包里复制整文件
+
+【3】确认 scripts/luajit_sim_env.sh 存在（旧的有就不用改）
+
+【4】替换 .github/workflows/ios-lbshop-6tier.yml
+    关键只有一行：
+      run: bash scripts/build_all.sh
+    步骤名必须是：
+      Build 6-tier pyq64 (single pipeline)
+
+【5】Commit 后 Actions → Run workflow
+
+【6】看日志第一行应有：
+      ========== 2/4 Compile LbShopLayer (-bg, NOT -b alone) ==========
+    且 header 含 02 08 不是 02 0a
+
+========================================
+若暂时不想传新文件：只改 1 行（临时）
+========================================
+
+打开 scripts/build_luajit_ios.sh 找到 smoke test：
+  run_luajit -b   改成   run_luajit -bg
+
+打开 scripts/compile_and_pack.sh：
+  run_luajit -b   改成   run_luajit -bg
+
+保存 → Run workflow
+
+========================================
+成功标志
+========================================
+  OK: LbShopLayer xxxx bytes, flag 0x08
+  DONE: dist/pyq64.zip
+  Artifacts 可下载 pyq64-ios-6tier
+
+========================================
+商城右上偏移 / 黑块（与安卓修前相同）
+========================================
+【原因】双重居中：
+  - LobbyBattleView 打开商城时 shopLayer:align(CENTER, cx, cy)
+  - LbShopLayer 里又用 display.cx/cy 摆 backLayer
+  安卓已修：patch_lobby_shop_align.py 去掉大厅 align + LbShopLayer 用 cx/cy
+  iOS #19 只换了 LbShopLayer 六档，未处理大厅 align → 右上偏
+
+【iOS 修复】client/LbShopLayer.lua 已改：
+  - backLayer 用本地 (0,0)，遮罩 pos(-cx,-cy) 铺满屏幕
+  - 与「大厅仍 align、商城用本地坐标」配套，无需改 LobbyBattleView
+
+【你需要做】
+  1. 把服务器最新 client/LbShopLayer.lua 同步到 GitHub 仓库
+  2. Actions 再 Run workflow 一次，下载新 pyq64.zip 换进 IPA
+  3. 验证：商城六档横排居中、无右上黑块

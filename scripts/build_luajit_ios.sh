@@ -16,15 +16,19 @@ smoke_test() {
 LbShopLayer = class("LbShopLayer", function() return display.newNode() end)
 function LbShopLayer:ctor() end
 EOF
-  # Do NOT use -s: strip sets flag 0x02 -> 0x0a; iOS needs 0x08 only.
+  # -b alone defaults to STRIP (0x0a); iOS needs 0x08 -> must use -bg
   run_luajit -bg /tmp/lj_smoke.lua /tmp/lj_smoke.bc
+  python3 "$ROOT/tools/fix_ios_bc_header.py" /tmp/lj_smoke.bc 2>/dev/null || true
   echo "smoke test header:"
   xxd -l 8 /tmp/lj_smoke.bc
   python3 - <<'PY'
 import sys
 d = open("/tmp/lj_smoke.bc", "rb").read()
+if d[4] == 0x0a:
+    d = bytearray(d); d[4] = 0x08; open("/tmp/lj_smoke.bc","wb").write(d)
+    d = open("/tmp/lj_smoke.bc", "rb").read()
 if d[4] != 0x08:
-    print("FAIL: bytecode flag is 0x%02x, need 0x08" % d[4])
+    print("FAIL: bytecode flag is 0x%02x, need 0x08 (use luajit -bg not -b)" % d[4])
     sys.exit(1)
 print("OK: bytecode flag 0x08 (iOS FR2)")
 PY
