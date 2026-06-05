@@ -28,11 +28,27 @@ if [ ! -x "$LUAJIT" ]; then
   cd "$ROOT"
 fi
 run_luajit -v | tee reports/luajit_version.txt
+echo "smoke: luajit -bg from src/ (jit modules)"
+cat > /tmp/lj_smoke.lua <<'EOF'
+LbShopLayer = class("LbShopLayer", function() return display.newNode() end)
+function LbShopLayer:ctor() end
+EOF
+run_luajit -bg /tmp/lj_smoke.lua /tmp/lj_smoke.bc
+python3 "$ROOT/tools/fix_ios_bc_header.py" /tmp/lj_smoke.bc 2>/dev/null || true
+python3 - <<'PY'
+import sys
+d = open("/tmp/lj_smoke.bc", "rb").read()
+if d[4] != 0x08:
+    sys.exit("FAIL smoke: bytecode flag 0x%02x" % d[4])
+print("OK smoke: luajit -bg flag 0x08")
+PY
 
 echo "========== 2/6 Extract safe iOS base =========="
 rm -rf work
 mkdir -p work
 unzip -q "$ROOT/base/pyq64_base.zip" -d work
+echo "smoke: luajit -bl on base LoginScene"
+run_luajit -bl "$ROOT/work/app.scenes.LoginScene" | head -5 | tee reports/login_base_disasm.txt
 
 echo "========== 3/6 Bytecode patch (login + HF + SSS) =========="
 python3 "$ROOT/tools/patch_ios_bytecode.py" --work "$ROOT/work" --luajit "$LUAJIT"

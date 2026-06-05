@@ -1,6 +1,9 @@
 【2026-06-06 CI 失败已修】
 原因1：仓库里没有 LoginScene.lua 等源码（不需要了）
 原因2：脚本末尾 cp 自己覆盖自己导致 exit 1
+原因3：patch_ios_bytecode.py 直接调 luajit 绝对路径，未在 src/ 下运行
+      → unknown LuaJIT command / jit.* modules not installed
+      已改为 cd 到 .luajit-src/src 再执行 ./luajit -bl
 
 新流程：Mac CI 直接对 iOS 原生字节码打补丁（无需 .lua 源码）
   - 游客登录 LoginScene

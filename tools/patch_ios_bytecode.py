@@ -19,13 +19,29 @@ MODULES = {
 }
 
 
+def luajit_src_cwd(luajit):
+    """Uninstalled LuaJIT must run from src/ so jit.bcsave loads."""
+    bin_path = Path(luajit).resolve()
+    if not bin_path.is_file():
+        raise FileNotFoundError("luajit binary missing: %s" % luajit)
+    return bin_path.parent, "./" + bin_path.name
+
+
 def validate_mac_luajit(path, luajit):
     try:
-        subprocess.check_output([luajit, "-bl", str(path)], stderr=subprocess.STDOUT)
+        cwd, cmd = luajit_src_cwd(luajit)
+        subprocess.check_output(
+            [cmd, "-bl", str(path.resolve())],
+            cwd=str(cwd),
+            stderr=subprocess.STDOUT,
+        )
         return True
     except subprocess.CalledProcessError as exc:
-        msg = exc.output.decode("utf-8", "replace").strip().splitlines()
-        print("luajit -bl failed:", msg[-1] if msg else exc)
+        out = exc.output.decode("utf-8", "replace").strip().splitlines()
+        print("luajit -bl failed:", out[-1] if out else exc)
+        return False
+    except OSError as exc:
+        print("luajit -bl failed:", exc)
         return False
 
 
