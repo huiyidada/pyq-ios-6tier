@@ -16,9 +16,9 @@ make clean >/dev/null 2>&1 || true
 DEVSYS="$(xcrun --sdk iphoneos --show-sdk-path)"
 echo "iOS SDK: $DEVSYS"
 
-make -j"$(sysctl -n hw.ncpu)" \
+make -j1 \
   TARGET_SYS=iOS \
-  TARGET_FLAGS="-arch arm64 -isysroot $DEVSYS -miphoneos-version-min=9.0"
+  TARGET_FLAGS="-arch arm64 -isysroot $DEVSYS -miphoneos-version-min=9.0 -Os"
 
 LUAJIT="$LJ_DIR/src/luajit"
 "$LUAJIT" -v
