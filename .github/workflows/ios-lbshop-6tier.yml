@@ -16,21 +16,14 @@ permissions:
 
 jobs:
   build-ios-shop:
-    # macos-14 = Xcode 15; macos-latest uses Xcode 16 which breaks LuaJIT 2.1 beta3 buildvm
     runs-on: macos-14
     timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Clear broken LuaJIT cache
-        run: rm -rf .luajit-src .luajit_ios_path .luajit_env || true
-
-      - name: Build LuaJIT for iOS (simulator)
-        run: bash scripts/build_luajit_ios.sh
-
-      - name: Compile LbShopLayer and pack pyq64
-        run: bash scripts/compile_and_pack.sh
+      - name: Build 6-tier pyq64 (single pipeline)
+        run: bash scripts/build_all.sh
 
       - name: Upload pyq64.zip
         uses: actions/upload-artifact@v4
@@ -40,12 +33,13 @@ jobs:
             dist/pyq64.zip
             dist/app.module.lobby.view.layer.LbShopLayer
             reports/build_report.txt
+            reports/header_before_fix.txt
+            reports/header_after_fix.txt
           retention-days: 30
 
       - name: Summary
         run: |
           echo "## iOS 6-tier build OK" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat reports/build_report.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
