@@ -23,7 +23,7 @@ mkdir -p build dist reports
 
 echo "=== compile LbShopLayer.lua ==="
 echo "LJ_DIR=$LJ_DIR"
-run_luajit -b -s "$ROOT/client/LbShopLayer.lua" "$ROOT/build/LbShopLayer"
+run_luajit -b "$ROOT/client/LbShopLayer.lua" "$ROOT/build/LbShopLayer"
 
 {
   echo "luajit -v:"
